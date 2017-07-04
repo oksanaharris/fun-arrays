@@ -1,4 +1,10 @@
+/*jshint esversion: 6 */
 var dataset = require('./dataset.json');
+
+function twoDecimals(number){
+
+  return Math.round(parseFloat(number)*100)/100;
+}
 
 /*
   create an array with accounts from bankBalances that are
@@ -29,7 +35,7 @@ var hundredThousandairs = dataset.bankBalances.filter((bank) => {return bank.amo
 
 */
 
-var datasetWithRoundedDollar = dataset.bankBalances.map((bank) => {return {'amount': bank.amount, 'state': bank.state, 'rounded': Math.round(bank.amount)};});
+var datasetWithRoundedDollar = dataset.bankBalances.map(({amount, state, rounded}) => {return {amount, state, rounded: Math.round(amount)};});
 
 
 /*
@@ -55,12 +61,12 @@ var datasetWithRoundedDollar = dataset.bankBalances.map((bank) => {return {'amou
     }
   assign the resulting new array to `roundedDime`
 */
-var datasetWithRoundedDime = dataset.bankBalances.map((bank) => {return {'amount': bank.amount, 'state': bank.state, 'roundedDime': Number(Number(bank.amount).toFixed(1))};});
+var datasetWithRoundedDime = dataset.bankBalances.map(({amount, state, roundedDime}) => {return {amount, state, roundedDime: parseFloat(parseFloat(amount).toFixed(1))};});
 
 // console.log(datasetWithRoundedDime);
 
 // set sumOfBankBalances to be the sum of all value held at `amount` for each bank object
-var sumOfBankBalances = dataset.bankBalances.map((bank) => { return Number(bank.amount); }).reduce((prev, curnt) => {return Number((prev+curnt).toFixed(2));});
+var sumOfBankBalances = dataset.bankBalances.map((bank) => { return parseFloat(bank.amount); }).reduce((prev, curnt) => {return twoDecimals(prev+curnt);});
 
 
 // console.log('final balance', sumOfBankBalances);
@@ -82,12 +88,12 @@ var sumOfBankBalances = dataset.bankBalances.map((bank) => { return Number(bank.
  // add all the amounts up -> reduce
 
 var sumOfInterests = dataset.bankBalances.filter((bank) => {
-  return bank.state === "WI" || bank.state === "IL" || bank.state === "WY" || bank.state === "OH" || bank.state === "GA" || bank.state === "DE";
+  return ['WI', 'IL', 'WY', 'GA', 'OH', 'DE'].indexOf(bank.state) >= 0;
 })
   .map((bank) => {
-    return Number((Number(bank.amount) * 0.189).toFixed(2));})
+    return twoDecimals(parseFloat(bank.amount) * 0.189);})
   .reduce((prev,curt) => {
-    return Number((prev + curt).toFixed(2));
+    return twoDecimals(prev + curt);
   });
 
 // console.log(sumOfInterests);
@@ -110,18 +116,29 @@ var sumOfInterests = dataset.bankBalances.filter((bank) => {
   )
  */
 
-var stateSums = {};
+//DEPRECATED - tried it a different way below - using reduce
+// var stateSums = {};
 
-dataset.bankBalances.forEach((bank) => {
-  if(stateSums.hasOwnProperty(bank.state)){
-    stateSums[bank.state] += (Number(bank.amount));
-  } else {
-    stateSums[bank.state] = (Number(bank.amount));
+// dataset.bankBalances.forEach((bank) => {
+//   if(stateSums.hasOwnProperty(bank.state)){
+//     stateSums[bank.state] += (Number(bank.amount));
+//   } else {
+//     stateSums[bank.state] = (Number(bank.amount));
+//   }
+// });
+
+
+
+var stateSums = dataset.bankBalances.reduce((totalObj, curtBankObj) => {
+  if (!totalObj.hasOwnProperty(curtBankObj.state)){
+    totalObj[curtBankObj.state] = 0;
   }
-});
+  totalObj[curtBankObj.state] += parseFloat(curtBankObj.amount);
+  return totalObj;
+}, {});
 
-Object.keys(stateSums).map((state) => {
-  stateSums[state] = Math.round(stateSums[state]*100)/100;
+Object.keys(stateSums).forEach((state) => {
+  stateSums[state] = twoDecimals(stateSums[state]);
 });
 
 // console.log(stateSums);
@@ -147,12 +164,15 @@ var allStateSums = Object.keys(stateSums).map((state) => {
   return {state: state, amount: stateSums[state]};
 });
 
-var sumOfHighInterests = Number(allStateSums.filter((stateSum) => {
-  return stateSum.state !== "WI" && stateSum.state !== "IL" && stateSum.state !== "WY" && stateSum.state !== "OH" && stateSum.state !== "GA" && stateSum.state !== "DE";})
+var sumOfHighInterests = twoDecimals(allStateSums.filter((stateSum) => {
+  return ['WI', 'IL', 'WY', 'GA', 'OH', 'DE'].indexOf(stateSum.state) === -1;
+})
   
-  .map((bank) => {return (Number(bank.amount) * 0.189).toFixed(2);})
-  .filter((amount) => {return Number(amount) > 50000;})
-  .reduce((p, c, i, a) => {return Number(p) + Number(c);}).toFixed(2));
+  .map((bank) => {return (parseFloat(bank.amount) * 0.189).toFixed(2);})
+
+  .filter((amount) => {return parseFloat(amount) > 50000;})
+  
+  .reduce((p, c, i, a) => {return parseFloat(p) + parseFloat(c);}));
 
 // console.log(sumOfHighInterests);
 
@@ -190,9 +210,10 @@ var higherStateSums = allStateSums.filter((state) => {return state.amount > 1000
   if true set `areStatesInHigherStateSum` to `true`
   otherwise set it to `false`
  */
-var areStatesInHigherStateSum = allStateSums.filter((bank) => {return bank.state === "WI" || bank.state === "IL" || bank.state === "WY" || bank.state === "OH" || bank.state === "GA" || bank.state === "DE";}).every((state) => {return state.amount > 2550000;});
+var areStatesInHigherStateSum = allStateSums.filter((bank) => { return ['WI', 'IL', 'WY', 'GA', 'OH', 'DE'].indexOf(bank.state) >= 0;})
+  .every((state) => {return state.amount > 2550000;});
 
-console.log(areStatesInHigherStateSum);
+// console.log(areStatesInHigherStateSum);
 
 /*
   Stretch Goal && Final Boss
@@ -208,8 +229,8 @@ console.log(areStatesInHigherStateSum);
   have a sum of account values greater than 2,550,000
   otherwise set it to be `false`
  */
- 
-var anyStatesInHigherStateSum = allStateSums.filter((bank) => {return bank.state === "WI" || bank.state === "IL" || bank.state === "WY" || bank.state === "OH" || bank.state === "GA" || bank.state === "DE";}).some((state) => {return state.amount > 2550000;});
+
+var anyStatesInHigherStateSum = allStateSums.filter((bank) => { return ['WI', 'IL', 'WY', 'GA', 'OH', 'DE'].indexOf(bank.state) >= 0;}).some((state) => {return state.amount > 2550000;});
 
 
 module.exports = {
